@@ -110,20 +110,45 @@ licenses, and capture details belong in the manifest.
 
 ## Fine-tuning smoke test
 
-Run one fixed training epoch to verify the local data, training, validation, and
-checkpoint pipeline:
+The earlier one-epoch smoke test verified the initial local data, training,
+validation, and checkpoint pipeline:
 
 ```bash
 python src/train_smoke.py
 ```
 
 The script validates the dataset first, then fine-tunes `yolo11n.pt` for one
-epoch at 320px with batch size 2. Its local outputs are ignored by Git.
+epoch at 320px with batch size 2. It attempted MPS but used CPU because MPS was
+unavailable at runtime. Its local outputs are ignored by Git.
 
-This is a smoke test, not a model evaluation. The current validation set has no
-`scratch` ground truth and the test set contains only normal images, so do not
-interpret any mAP, precision, recall, or empty inference result as detector
-quality or a PASS/FAIL decision.
+## CPU training baseline
+
+The initial five-epoch, 320px runs used an earlier Roboflow `Stretch to`
+export. They remain local debugging artifacts only: stretching changed the
+coin geometry, so do not use those runs for model conclusions.
+
+The corrected export uses Roboflow `Fit within`, which preserves image aspect
+ratio. Run the current exploratory baseline at the YOLO11 reference input size:
+
+```bash
+python src/train_baseline.py \
+  --epochs 100 \
+  --imgsz 640 \
+  --run-name yolo11n-cpu-e100-s0-fit640
+```
+
+The script validates the 26-image grouped dataset first, then fine-tunes
+`yolo11n.pt` using CPU, 640px images, batch size 2, seed 0,
+deterministic mode, zero dataloader workers, and no cache. It then loads
+`best.pt` and runs an Ultralytics validation pass on the test split. Outputs are
+local-only under `runs/detect/baseline/`, so this does not overwrite the smoke
+run.
+
+This baseline is a reproducible pipeline artifact, not model evaluation. The
+test split contains three normal images plus one `dent` and one
+`stain_corrosion` image, but no `scratch` ground truth. The validation and test
+sets are far too small for mAP, precision, recall, prediction thresholds, empty
+predictions, or PASS/FAIL results to have a quality interpretation.
 
 ## Documentation
 

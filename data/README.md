@@ -65,6 +65,10 @@ datasets/coin-defect-hybrid/
 └── labels/{train,val,test}/
 ```
 
+When generating a Roboflow version, use `Fit within 640×640` to preserve the
+coin's aspect ratio. Do not use `Stretch to`, which distorts portrait coin
+photos and their visible defects.
+
 The export's image and label files remain local. The tracked `data.yaml` defines
 the class order used by the current Roboflow export:
 

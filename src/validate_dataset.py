@@ -25,7 +25,7 @@ MANIFEST_COLUMNS = {
 }
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate Coin-AOI YOLO labels, image pairing, and data splits."
     )
@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
         default=Path("data/manifest.csv"),
         help="CSV created from data/manifest_template.csv.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def read_manifest(path: Path, errors: list[str]) -> dict[str, dict[str, str]]:
@@ -200,8 +200,8 @@ def validate_export(
     return len(image_ids)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     errors: list[str] = []
     manifest = read_manifest(args.manifest, errors)
     validate_manifest_splits(manifest, errors)

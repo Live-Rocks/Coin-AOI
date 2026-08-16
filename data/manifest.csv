@@ -22,3 +22,6 @@ self_C006_03,C006,self_captured,,,phone_desk_lamp,,test,annotated
 self_C007_01,C007,self_captured,,,phone_desk_lamp,,train,annotated
 self_C007_02,C007,self_captured,,,phone_desk_lamp,,train,annotated
 self_C007_03,C007,self_captured,,,phone_desk_lamp,,train,annotated
+self_C008_01,C008,self_captured,,,unknown,scratch,val,annotated
+self_C009_01,C009,self_captured,,,unknown,dent,test,annotated
+self_C010_01,C010,self_captured,,,unknown,stain_corrosion,test,annotated
