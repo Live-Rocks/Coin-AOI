@@ -1,0 +1,16 @@
+# Python virtual environment and cache files
+.venv/
+__pycache__/
+*.py[cod]
+
+# macOS metadata
+.DS_Store
+
+# Local inference outputs and downloaded model weights
+outputs/
+*.pt
+runs/
+Ultralytics/
+
+# Local-only input images
+data/local/
