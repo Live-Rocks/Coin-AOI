@@ -15,6 +15,25 @@ These directories are intentionally ignored by Git:
 Do not upload an image to Roboflow until its row exists in the manifest and its
 source and license have been checked.
 
+## MVP phone capture checklist
+
+Use this simple setup to verify the full dataset flow:
+
+1. Use the phone's main 1x camera with one fixed desk lamp and background.
+   Disable filters, portrait mode, and night mode.
+2. For each coin face, take three photos: front 45-degree light, left raking
+   light, and right raking light.
+3. Start new physical coin IDs at `C006`; use names such as
+   `self_C006_01.jpg` and store originals in
+   `data/raw/self_captured/`.
+4. In the manifest, use `capture_setup=phone_desk_lamp`. Assign every photo
+   from one `coin_id` to the same manual split: `train`, `val`, or `test`.
+5. Include at least one confirmed normal coin. It receives no bounding box and
+   later exports with an empty YOLO label file.
+
+Do not damage coins or create digital defects to make this MVP dataset. If a
+feature is uncertain, leave that image out of the dataset.
+
 ## Manifest
 
 Copy `manifest_template.csv` to `manifest.csv` and add one row per image before

@@ -1,4 +1,9 @@
 image_id,coin_id,source_type,source_url,license,capture_setup,defect_classes,split,annotation_status
+self_C001_01,C001,self_captured,,,unknown,"dent,stain_corrosion",val,annotated
+self_C001_02,C001,self_captured,,,unknown,dent,val,annotated
+self_C001_03,C001,self_captured,,,unknown,"dent,stain_corrosion",val,annotated
+self_C001_04,C001,self_captured,,,unknown,dent,val,annotated
+self_C001_05,C001,self_captured,,,unknown,,val,annotated
 self_C002_01,C002,self_captured,,,unknown,scratch,train,annotated
 self_C004_01,C004,self_captured,,,unknown,"dent,scratch,stain_corrosion",train,annotated
 self_C004_02,C004,self_captured,,,unknown,"dent,scratch,stain_corrosion",train,annotated
@@ -11,3 +16,9 @@ self_C005_05,C005,self_captured,,,unknown,dent,train,annotated
 self_C005_07,C005,self_captured,,,unknown,scratch,train,annotated
 self_C005_08,C005,self_captured,,,unknown,stain_corrosion,train,annotated
 self_C005_09,C005,self_captured,,,unknown,dent,train,annotated
+self_C006_01,C006,self_captured,,,phone_desk_lamp,,test,annotated
+self_C006_02,C006,self_captured,,,phone_desk_lamp,,test,annotated
+self_C006_03,C006,self_captured,,,phone_desk_lamp,,test,annotated
+self_C007_01,C007,self_captured,,,phone_desk_lamp,,train,annotated
+self_C007_02,C007,self_captured,,,phone_desk_lamp,,train,annotated
+self_C007_03,C007,self_captured,,,phone_desk_lamp,,train,annotated

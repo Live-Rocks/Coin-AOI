@@ -14,16 +14,17 @@ Last verified: 2026-08-17
 
 ## Dataset reality
 
-The current dataset is a pipeline smoke test, not a training-ready release.
+The current dataset is a complete pipeline smoke test, not a training-ready
+release.
 
 | Item | Current state |
 | --- | --- |
-| Usable annotated images | 12 |
-| Physical coins represented | 3 (`C002`, `C004`, `C005`) |
-| Available split | train only |
+| Usable annotated images | 23 |
+| Physical coins represented | 6 (`C001`, `C002`, `C004`, `C005`, `C006`, `C007`) |
+| Available split | train: 15, val: 5, test: 3 |
 | Class mapping | `0=dent`, `1=scratch`, `2=stain_corrosion` |
 | Image source | self-captured only |
-| Normal images | none in the validated pilot |
+| Normal images | 7 empty-label images |
 | Validation status | `src/validate_dataset.py` passed |
 
 The image and label files are local-only. Their metadata is recorded in
@@ -31,14 +32,15 @@ The image and label files are local-only. Their metadata is recorded in
 
 ## Current blocker
 
-There is no representative dataset with normal samples and independent
-validation/test partitions. The current 12-image train-only pilot can test data
-format and pipeline behaviour, but cannot support a credible performance claim.
+The grouped train/val/test flow now works, but the dataset is too small and the
+test split contains only normal images. It cannot support a credible
+performance claim or defect-recall measurement.
 
 ## Next milestone
 
-Create and validate a grouped train/val/test dataset release. Every physical
-coin must be assigned to a single split before augmentation.
+Collect more independent coins so validation and test contain all defect
+classes and normal images. Every physical coin must remain in one split before
+augmentation.
 
 ## Claims we can make
 

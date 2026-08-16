@@ -1,2 +1,2 @@
 image_id,coin_id,source_type,source_url,license,capture_setup,defect_classes,split,annotation_status
-example_coin_001,C001,self_captured,,,front_light_45deg,scratch,train,not_started
+self_C006_01,C006,self_captured,,,phone_desk_lamp,,val,not_started
