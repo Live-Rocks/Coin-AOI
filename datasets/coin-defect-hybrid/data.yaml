@@ -1,0 +1,10 @@
+# Keep this class order identical in Roboflow and every YOLO label file.
+path: datasets/coin-defect-hybrid
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: scratch
+  1: stain_corrosion
+  2: dent

@@ -14,3 +14,11 @@ Ultralytics/
 
 # Local-only input images
 data/local/
+data/raw/
+data/roboflow/
+
+# Local YOLO dataset export (keep data.yaml tracked)
+datasets/coin-defect-hybrid/images/
+datasets/coin-defect-hybrid/labels/
+datasets/coin-defect-hybrid/README.dataset.txt
+datasets/coin-defect-hybrid/README.roboflow.txt

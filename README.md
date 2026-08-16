@@ -73,3 +73,33 @@ Do not interpret an empty result as `PASS`. At this stage it only means the
 general-purpose model found no supported COCO object at the selected confidence
 threshold. A future fine-tuned model and a deterministic QC rule will be needed
 before Coin-AOI can make a PASS/FAIL decision.
+
+## Dataset and annotation
+
+The first custom dataset uses three known defect classes:
+
+```text
+0 scratch
+1 stain_corrosion
+2 dent
+```
+
+Read the [dataset workflow](data/README.md) before collecting or exporting
+images, and follow the [annotation guidelines](docs/annotation-guidelines.md)
+when using Roboflow. These documents define the class boundaries, image-source
+records, and group split rule that prevents photos of the same physical coin
+from leaking across train, validation, and test data.
+
+After exporting a Roboflow Object Detection project in YOLO format to
+`datasets/coin-defect-hybrid/`, create `data/manifest.csv` from the supplied
+template and validate the local export:
+
+```bash
+cp data/manifest_template.csv data/manifest.csv
+python src/validate_dataset.py
+```
+
+The validator checks that images and labels are paired, normal images have empty
+label files, class IDs are valid, and each `coin_id` appears in only one split.
+Raw images and exported datasets are deliberately ignored by Git; source URLs,
+licenses, and capture details belong in the manifest.
