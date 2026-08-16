@@ -8,6 +8,8 @@ Last verified: 2026-08-17
 - [x] Run pretrained YOLO single-image inference and save an annotated image
   plus JSON detections.
 - [x] Define a three-class annotation taxonomy and validate a local YOLO export.
+- [x] Complete a one-epoch YOLO fine-tuning smoke test and load its checkpoint
+  for inference.
 - [ ] Fine-tune a coin-defect detector.
 - [ ] Evaluate a trained detector on an independent test set.
 - [ ] Implement a deterministic PASS/FAIL rule.
@@ -29,6 +31,18 @@ release.
 
 The image and label files are local-only. Their metadata is recorded in
 [`data/manifest.csv`](../data/manifest.csv).
+
+## Smoke training result
+
+`python src/train_smoke.py` completed one epoch after validating the dataset and
+produced `best.pt`, `last.pt`, training logs, and validation artifacts under
+`runs/detect/runs/smoke/yolo11n-mps-s0/`. The checkpoint loaded successfully
+for a single-image inference smoke test.
+
+PyTorch was built with MPS support, but MPS was unavailable at runtime, so
+Ultralytics trained on CPU (Apple M2). This verifies CPU fallback, not MPS
+training performance. The one-epoch run produced zero detections at the default
+confidence threshold; that result has no quality interpretation.
 
 ## Current blocker
 

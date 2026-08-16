@@ -108,6 +108,23 @@ label files, class IDs are valid, and each `coin_id` appears in only one split.
 Raw images and exported datasets are deliberately ignored by Git; source URLs,
 licenses, and capture details belong in the manifest.
 
+## Fine-tuning smoke test
+
+Run one fixed training epoch to verify the local data, training, validation, and
+checkpoint pipeline:
+
+```bash
+python src/train_smoke.py
+```
+
+The script validates the dataset first, then fine-tunes `yolo11n.pt` for one
+epoch at 320px with batch size 2. Its local outputs are ignored by Git.
+
+This is a smoke test, not a model evaluation. The current validation set has no
+`scratch` ground truth and the test set contains only normal images, so do not
+interpret any mAP, precision, recall, or empty inference result as detector
+quality or a PASS/FAIL decision.
+
 ## Documentation
 
 - [Product scope and limitations](docs/PRODUCT.md)
