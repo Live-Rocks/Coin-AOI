@@ -8,9 +8,9 @@ lighting, and corrosion variation.
 
 These directories are intentionally ignored by Git:
 
-- `raw/self_captured/`: original photos captured for this project.
-- `raw/public/`: downloaded public images before annotation.
-- `roboflow/`: temporary files downloaded from or prepared for Roboflow.
+- `data/raw/self_captured/`: original photos captured for this project.
+- `data/raw/public/`: downloaded public images before annotation.
+- `data/roboflow/`: raw YOLO exports downloaded from Roboflow.
 
 Do not upload an image to Roboflow until its row exists in the manifest and its
 source and license have been checked.
@@ -35,8 +35,9 @@ public_smithsonian_001,P001,public,https://example.org/item,CC0,unknown,stain_co
 
 ## YOLO export
 
-Export the Roboflow project in YOLO format to
-`datasets/coin-defect-hybrid/`. Its local structure must be:
+Download the Roboflow project in YOLO format to `data/roboflow/`. Copy the
+selected image/label pairs into `datasets/coin-defect-hybrid/`, which must use
+this local structure:
 
 ```text
 datasets/coin-defect-hybrid/

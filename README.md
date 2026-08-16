@@ -94,9 +94,9 @@ The numeric IDs mirror the current Roboflow YOLO export. The order is not a
 quality ranking; it only has to remain consistent in `data.yaml`, label files,
 training, and inference.
 
-After exporting a Roboflow Object Detection project in YOLO format to
-`datasets/coin-defect-hybrid/`, create `data/manifest.csv` from the supplied
-template and validate the local export:
+Download a Roboflow Object Detection export to `data/roboflow/`, then copy the
+selected image/label pairs into `datasets/coin-defect-hybrid/`. Create
+`data/manifest.csv` from the supplied template and validate the local dataset:
 
 ```bash
 cp data/manifest_template.csv data/manifest.csv
@@ -107,3 +107,11 @@ The validator checks that images and labels are paired, normal images have empty
 label files, class IDs are valid, and each `coin_id` appears in only one split.
 Raw images and exported datasets are deliberately ignored by Git; source URLs,
 licenses, and capture details belong in the manifest.
+
+## Documentation
+
+- [Product scope and limitations](docs/PRODUCT.md)
+- [Implemented and planned architecture](docs/ARCHITECTURE.md)
+- [Current verified project status](docs/PROJECT_STATUS.md)
+- [Technical and data decisions](docs/DECISIONS.md)
+- [Annotation guidelines](docs/annotation-guidelines.md)
