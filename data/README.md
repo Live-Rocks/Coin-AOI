@@ -46,10 +46,10 @@ datasets/coin-defect-hybrid/
 ```
 
 The export's image and label files remain local. The tracked `data.yaml` defines
-the only valid class order:
+the class order used by the current Roboflow export:
 
 ```text
-0 scratch
-1 stain_corrosion
-2 dent
+0 dent
+1 scratch
+2 stain_corrosion
 ```

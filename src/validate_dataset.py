@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from collections import defaultdict
 from pathlib import Path
 
 
-CLASS_NAMES = ("scratch", "stain_corrosion", "dent")
+CLASS_NAMES = ("dent", "scratch", "stain_corrosion")
 SPLITS = ("train", "val", "test")
 IMAGE_EXTENSIONS = {".bmp", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 MANIFEST_COLUMNS = {
@@ -95,9 +96,7 @@ def validate_manifest_splits(
             )
 
 
-def validate_label(
-    label_path: Path, image_id: str, errors: list[str]
-) -> None:
+def validate_label(label_path: Path, errors: list[str]) -> None:
     for line_number, line in enumerate(
         label_path.read_text(encoding="utf-8").splitlines(), start=1
     ):
@@ -142,6 +141,12 @@ def validate_label(
             )
 
 
+def manifest_image_id(exported_image_id: str) -> str:
+    """Map Roboflow's exported filename back to its original image ID."""
+    source_name = exported_image_id.partition(".rf.")[0]
+    return re.sub(r"_(?:jpe?g|png)$", "", source_name, flags=re.IGNORECASE)
+
+
 def validate_export(
     dataset_root: Path,
     manifest: dict[str, dict[str, str]],
@@ -163,9 +168,10 @@ def validate_export(
             path for path in image_dir.iterdir() if path.suffix.lower() in IMAGE_EXTENSIONS
         )
         for image_path in images:
-            image_id = image_path.stem
+            exported_image_id = image_path.stem
+            image_id = manifest_image_id(exported_image_id)
             image_ids.add(image_id)
-            label_path = label_dir / f"{image_id}.txt"
+            label_path = label_dir / f"{exported_image_id}.txt"
 
             if image_id not in manifest:
                 errors.append(f"{image_path}: missing manifest row for {image_id}.")
@@ -181,7 +187,7 @@ def validate_export(
                     "Normal images require an empty label file."
                 )
                 continue
-            validate_label(label_path, image_id, errors)
+            validate_label(label_path, errors)
 
         for label_path in label_dir.glob("*.txt"):
             if not any(image_path.stem == label_path.stem for image_path in images):

@@ -8,9 +8,9 @@ taxonomy.
 
 | ID | Class | Include | Exclude |
 | --- | --- | --- | --- |
-| 0 | `scratch` | A visible, continuous, non-design linear surface mark. | Coin lettering, engraved artwork, mint design lines, rim edges, or a narrow highlight from lighting. |
-| 1 | `stain_corrosion` | A local, unexpected discoloration, oxidation, stain, or corrosion patch. | Expected patina, a shadow, removable dust, background, or an uncertain reflection. |
-| 2 | `dent` | A visible indentation, impact mark, or deformation in the metal surface. | A feature identified only from glare, intentional relief, lettering, or an uncertain depth cue. |
+| 0 | `dent` | A visible indentation, impact mark, or deformation in the metal surface. | A feature identified only from glare, intentional relief, lettering, or an uncertain depth cue. |
+| 1 | `scratch` | A visible, continuous, non-design linear surface mark. | Coin lettering, engraved artwork, mint design lines, rim edges, or a narrow highlight from lighting. |
+| 2 | `stain_corrosion` | A local, unexpected discoloration, oxidation, stain, or corrosion patch. | Expected patina, a shadow, removable dust, background, or an uncertain reflection. |
 
 `stain_corrosion` deliberately combines stains and corrosion. Their visual
 boundary is too subjective for the first dataset; do not create extra classes
@@ -55,8 +55,9 @@ Exclude or mark for review when any of these prevent reliable judgment:
 ## Roboflow checklist
 
 1. Create an **Object Detection** project named `coin-defect-hybrid`.
-2. Create only these labels, with this exact spelling and order:
-   `scratch`, `stain_corrosion`, `dent`.
+2. Create only these labels with exact spelling: `scratch`, `stain_corrosion`,
+   `dent`. Roboflow's current YOLO export maps them as `0=dent`, `1=scratch`,
+   `2=stain_corrosion`; use the tracked `data.yaml` as the local source of truth.
 3. Upload only images that have manifest rows.
 4. Annotate a 10–20 image pilot, review ambiguous cases, and revise these
    guidelines before scaling up.

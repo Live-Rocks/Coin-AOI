@@ -1,0 +1,13 @@
+image_id,coin_id,source_type,source_url,license,capture_setup,defect_classes,split,annotation_status
+self_C002_01,C002,self_captured,,,unknown,scratch,train,annotated
+self_C004_01,C004,self_captured,,,unknown,"dent,scratch,stain_corrosion",train,annotated
+self_C004_02,C004,self_captured,,,unknown,"dent,scratch,stain_corrosion",train,annotated
+self_C004_03,C004,self_captured,,,unknown,"dent,stain_corrosion",train,annotated
+self_C005_01,C005,self_captured,,,unknown,stain_corrosion,train,annotated
+self_C005_02,C005,self_captured,,,unknown,dent,train,annotated
+self_C005_03,C005,self_captured,,,unknown,scratch,train,annotated
+self_C005_04,C005,self_captured,,,unknown,stain_corrosion,train,annotated
+self_C005_05,C005,self_captured,,,unknown,dent,train,annotated
+self_C005_07,C005,self_captured,,,unknown,scratch,train,annotated
+self_C005_08,C005,self_captured,,,unknown,stain_corrosion,train,annotated
+self_C005_09,C005,self_captured,,,unknown,dent,train,annotated

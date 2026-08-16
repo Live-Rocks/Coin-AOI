@@ -79,9 +79,9 @@ before Coin-AOI can make a PASS/FAIL decision.
 The first custom dataset uses three known defect classes:
 
 ```text
-0 scratch
-1 stain_corrosion
-2 dent
+0 dent
+1 scratch
+2 stain_corrosion
 ```
 
 Read the [dataset workflow](data/README.md) before collecting or exporting
@@ -89,6 +89,10 @@ images, and follow the [annotation guidelines](docs/annotation-guidelines.md)
 when using Roboflow. These documents define the class boundaries, image-source
 records, and group split rule that prevents photos of the same physical coin
 from leaking across train, validation, and test data.
+
+The numeric IDs mirror the current Roboflow YOLO export. The order is not a
+quality ranking; it only has to remain consistent in `data.yaml`, label files,
+training, and inference.
 
 After exporting a Roboflow Object Detection project in YOLO format to
 `datasets/coin-defect-hybrid/`, create `data/manifest.csv` from the supplied
