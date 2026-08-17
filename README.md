@@ -1,13 +1,35 @@
 # Coin-AOI
 
-Coin-AOI is a learning prototype for coin surface inspection. This first stage
-only proves that a local Python environment can run an Ultralytics pretrained
-YOLO model on one image.
+Coin-AOI is a computer-vision learning prototype: capture coin photos, label
+defects, fine-tune YOLO11n, and evaluate whether the model generalises. It is
+**not** a usable coin-defect detector and not an industrial AOI system.
 
-It is **not** a coin-defect detector yet. The pretrained model knows the
-general COCO object classes, not defects such as scratches, stains, or dents.
-It may therefore produce no boxes for a coin image. That is a valid result for
-this environment check; custom coin-defect training comes later.
+The pipeline that exists today:
+
+```text
+self-captured coins → Roboflow labels → YOLO11n fine-tune
+→ train can memorise reviewed rim labels
+→ held-out coins fail
+→ hosted Roboflow API is wired, but the cloud endpoint returns HTTP 500
+```
+
+That negative result is the main finding. After 100 epochs, `last.pt` localised
+all seven training `rim_dent` boxes at confidence 0.25 and rejected the six
+training target-negatives. The same checkpoint missed both held-out validation
+rims and the sealed test coin. This is overfitting / failed cross-coin
+generalisation, not a missing confidence threshold.
+
+## What this repo demonstrates
+
+- Python: isolated venv, Ultralytics YOLO, dataset validation, and evaluation
+  scripts that turn one idea into a runnable experiment.
+- Object detection: YOLO11n fine-tuning, grouped train/val/test splits, and
+  single-image inference with JSON plus annotated-image output.
+- ML basics: training versus validation, leakage-aware `coin_id` splits, loss
+  and mAP as diagnostics, and an explicit train-memorisation versus
+  generalisation check.
+- AI-assisted development: the repo was built and diagnosed in Cursor, with
+  API keys kept out of Git.
 
 ## 1. Create and activate the environment
 
@@ -32,43 +54,27 @@ pretrained weights.
 
 ## 3. Run inference on one coin image
 
+The default `src/inference.py` path is an environment check with pretrained
+COCO YOLO11n. Empty boxes are expected; they are not a coin-defect result.
+
 ```bash
 mkdir -p data/local
 # Copy your image to data/local/coin.jpg, then run:
 python src/inference.py --source data/local/coin.jpg
 ```
 
-`data/local/` is ignored by Git, so your original inspection images stay on
-your computer rather than being committed to the repository.
+`data/local/` is ignored by Git. Optional `--confidence` and `--device`
+flags are documented in `python src/inference.py --help`. Outputs go to
+`outputs/inference/` as an annotated image and a JSON file.
 
-Optional arguments:
+## 4. Hosted Roboflow client (known external blocker)
 
-```bash
-# Keep only detections with confidence at least 0.50
-python src/inference.py --source data/local/coin.jpg --confidence 0.50
-
-# Force Apple Silicon acceleration when available
-python src/inference.py --source data/local/coin.jpg --device mps
-```
-
-The script writes these files to `outputs/inference/`:
-
-- `annotated_<image-name>.jpg`: your source image with any detected bounding
-  boxes drawn on it.
-- `detections_<image-name>.json`: each prediction's class, confidence, and
-  bounding-box coordinates.
-
-## 4. Run the hosted Roboflow workflow
-
-The project also has a minimal hosted inference path for the published
-`coin-defect-hybrid` version 9 workflow. Put a private API key in a local
-`.env` file; `.env` is ignored by Git:
-
-```text
-ROBOFLOW_API_KEY=your-private-key
-```
-
-Load the variable and run one image:
+`src/inference_roboflow.py` is a dependency-free REST client for the published
+v9 Workflow. It reads `ROBOFLOW_API_KEY` from the environment, retries
+transient failures, and writes compact JSON. As last verified on 2026-08-17,
+Roboflow serverless returns HTTP 500 for both the model and the Workflow.
+That is a cloud-side blocker; the local client and its unit tests already
+exist. Do not treat a 500 as a passing detector.
 
 ```bash
 set -a
@@ -77,45 +83,8 @@ set +a
 python src/inference_roboflow.py --source data/local/coin.jpg
 ```
 
-The script uploads the image to Roboflow serverless inference, uses a 120-second
-timeout, and retries transient failures twice with exponential backoff. It
-writes the response keys and compact JSON to `outputs/roboflow-inference/`.
-Any base64 image outputs are decoded into separate files rather than embedded
-in the JSON. Override the network defaults with `--timeout` and `--retries`.
-
-The reproducible hosted smoke gate uses the exact Roboflow v9 `C005_03` test
-image and requires both the declared output and the expected scratch class:
-
-```bash
-python src/inference_roboflow.py \
-  --source data/local/roboflow-smoke/C005_03.png \
-  --source-url https://source.roboflow.com/RBizhxjW0kge5Flii3Wlp7jUK8g2/vGVZc5ZRWDsD2KfIlyLh/original.jpg \
-  --expect-output predictions \
-  --expect-class scratch \
-  --output-dir outputs/roboflow-smoke
-```
-
-The fixed image SHA-256 is
-`d1ac6fdf0170266bf02bf89b91176e9c64cee415eb303e397e4857167a34aec0`.
-Successful JSON records the source hash, timestamp, observed output keys,
-classes, and acceptance result. Hosted errors write a secret-free
-`failure_C005_03.json` evidence file. The equivalent credit-consuming live
-test is opt-in:
-
-```bash
-RUN_ROBOFLOW_LIVE=1 \
-python -m unittest discover \
-  -s tests -p 'test_inference_roboflow.py' -v
-```
-
-Never commit or paste the private key into source code. Version 9 is currently
-a pipeline smoke test; successful hosted inference does not by itself establish
-accuracy or generalisation. As last verified on 2026-08-17, the Workflow
-contract was available but both its MCP and REST executions returned HTTP 500.
-The latest failures were reported to Roboflow with direct-model reference
-`46ecb284e6bd8db56380dbf5732bf501` and Workflow reference
-`6dedb323169641584dd70b12ebc8eafe`. That is a hosted execution blocker, not a
-successful inference result.
+The fixed `C005_03` acceptance command, SHA-256, and opt-in live test are in
+the Hosted Workflow notes below if you need to re-run the smoke gate.
 
 ## Key terms
 
@@ -128,10 +97,10 @@ successful inference result.
 
 ## Important limitation
 
-Do not interpret an empty result as `PASS`. At this stage it only means the
-general-purpose model found no supported COCO object at the selected confidence
-threshold. A future fine-tuned model and a deterministic QC rule will be needed
-before Coin-AOI can make a PASS/FAIL decision.
+Do not interpret an empty result as `PASS`. A missing box can mean the
+pretrained COCO model saw no supported class, the fine-tuned model failed to
+generalise, or a hosted endpoint returned an error. Coin-AOI has no
+deterministic quality-control rule.
 
 ## Dataset and annotation
 
@@ -279,6 +248,34 @@ false positive on the six train target-negatives. Neither checkpoint detected
 the two held-out C011 validation rims at that threshold. The frozen `best.pt`
 then missed C009 and produced no boxes on any of the five test negatives. This
 isolates a cross-coin generalisation failure; it is not a usable rim detector.
+
+## Hosted Workflow notes
+
+Store `ROBOFLOW_API_KEY` in a local `.env` file that Git ignores. The
+acceptance gate for the published v9 Workflow is:
+
+```bash
+python src/inference_roboflow.py \
+  --source data/local/roboflow-smoke/C005_03.png \
+  --source-url https://source.roboflow.com/RBizhxjW0kge5Flii3Wlp7jUK8g2/vGVZc5ZRWDsD2KfIlyLh/original.jpg \
+  --expect-output predictions \
+  --expect-class scratch \
+  --output-dir outputs/roboflow-smoke
+```
+
+The fixed image SHA-256 is
+`d1ac6fdf0170266bf02bf89b91176e9c64cee415eb303e397e4857167a34aec0`.
+Live failures write `outputs/roboflow-smoke/failure_C005_03.json`. Offline
+client tests:
+
+```bash
+python -m unittest discover -s tests -p 'test_inference_roboflow.py' -v
+```
+
+The credit-consuming live test stays opt-in with `RUN_ROBOFLOW_LIVE=1`.
+Roboflow reference IDs for the 2026-08-17 HTTP 500s are
+`46ecb284e6bd8db56380dbf5732bf501` (model) and
+`6dedb323169641584dd70b12ebc8eafe` (Workflow).
 
 ## Documentation
 

@@ -2,6 +2,14 @@
 
 Last verified: 2026-08-17
 
+## Portfolio versus product
+
+This repository is ready to show as a freshman/junior CV side project. A
+reviewer can clone it, run the Python/YOLO pipeline, and read an honest
+train-memorisation versus held-out failure. It is not a finished inspection
+product: no generalising detector, no PASS/FAIL rule, and no successful
+hosted inference.
+
 ## Current capability
 
 - [x] Create an isolated Python environment and install Ultralytics YOLO.
@@ -18,6 +26,9 @@ Last verified: 2026-08-17
   cross-coin validation failure.
 - [x] Implement an API-key-safe Roboflow Workflow REST client with bounded
   retries, typed errors, and compact output persistence.
+
+Product gaps (not required to treat this repo as a reviewable side project):
+
 - [ ] Complete a successful published Roboflow Workflow inference; the live
   endpoint currently returns HTTP 500.
 - [ ] Achieve qualitative dent detection on a held-out physical coin.
@@ -147,21 +158,27 @@ No real prediction response has been accepted as evidence.
 
 ## Current blocker
 
-The rim-only task definition and grouped flow now work, and training-set
-memorisation is confirmed. The blocker is cross-coin generalisation: both C011
-validation rims and the C009 test rim were missed at confidence 0.25. There are
-only five physical rim-positive coins in v2 training, one in validation, and
-one in test.
+For a job-reviewable prototype, nothing is blocked: the pipeline, negative
+rim-dent result, and hosted client are documented.
+
+For a working inspector, two product gaps remain. The modelling gap is
+cross-coin generalisation: both C011 validation rims and the C009 test rim
+were missed at confidence 0.25. There are only five physical rim-positive
+coins in v2 training, one in validation, and one in test. The integration gap
+is Roboflow hosted HTTP 500; that is external and is not the next modelling
+experiment.
 
 ## Next milestone
 
-Collect independently confirmed rim-deformed coins under the same capture
-protocol before tuning the model. Keep every physical coin in one split,
+If continuing as a detector: collect independently confirmed rim-deformed
+coins under the same capture protocol, keep every physical coin in one split,
 expand validation and test beyond one positive coin each, then repeat the
-frozen evaluation protocol.
+frozen evaluation protocol. If only using this repo as a portfolio piece, stop
+here and do not wait on hosted inference.
 
 ## Claims we can make
 
+- This is a reviewable CV side project: capture, label, train, evaluate.
 - The local pretrained inference path works.
 - The current YOLO export uses the documented three-class mapping.
 - The pilot manifest and local export pass structural validation.
@@ -171,11 +188,14 @@ frozen evaluation protocol.
   explicit negative result.
 - The reviewed rim-only model can memorise its seven training positives while
   rejecting its six training target-negatives at confidence 0.25.
+- The hosted REST client and offline tests exist; live execution is blocked by
+  Roboflow HTTP 500.
 
 ## Claims we cannot make
 
 - Fine-tuned defect-detection accuracy, mAP, precision, or recall.
 - Generalisation to unseen coins, lighting, or defects.
+- A completed hosted inference demo.
 - PASS/FAIL accuracy or production readiness.
 
 ## Maintenance rule
