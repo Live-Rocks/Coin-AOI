@@ -19,6 +19,23 @@ flowchart TD
 model is trained on COCO classes, so its predictions are not coin-defect
 predictions.
 
+The optional hosted path uses the published Roboflow version 9 Workflow:
+
+```mermaid
+flowchart TD
+    localCoin[Local coin image] --> hostedClient[src/inference_roboflow.py]
+    hostedClient --> workflow[Roboflow serverless Workflow]
+    workflow --> dynamicOutputs[Workflow-defined outputs]
+    dynamicOutputs --> compactJson[Compact JSON]
+    dynamicOutputs --> imageArtifacts[Decoded image artifacts]
+```
+
+The API key is read only from `ROBOFLOW_API_KEY`. The client validates the
+documented list response, discovers output names from the response, and writes
+base64 image-shaped outputs to separate files. The integration exists locally,
+but a successful hosted execution is not yet verified because the published
+endpoint returned HTTP 500 on 2026-08-17.
+
 ## Dataset preparation flow
 
 ```mermaid

@@ -12,6 +12,15 @@ Last verified: 2026-08-17
   for inference.
 - [x] Run a corrected 640px CPU exploratory baseline and validate its
   checkpoint on the test split.
+- [x] Build a leakage-checked dent-only dataset and save held-out qualitative
+  inference evidence.
+- [x] Build a reviewed rim-only dataset and verify train memorisation versus
+  cross-coin validation failure.
+- [x] Implement an API-key-safe Roboflow Workflow REST client with bounded
+  retries, typed errors, and compact output persistence.
+- [ ] Complete a successful published Roboflow Workflow inference; the live
+  endpoint currently returns HTTP 500.
+- [ ] Achieve qualitative dent detection on a held-out physical coin.
 - [ ] Train a training-ready coin-defect detector.
 - [ ] Evaluate a trained detector on an independent test set.
 - [ ] Implement a deterministic PASS/FAIL rule.
@@ -23,12 +32,12 @@ release.
 
 | Item | Current state |
 | --- | --- |
-| Usable annotated images | 26 |
-| Physical coins represented | 9 (`C001`, `C002`, `C004`–`C010`) |
-| Available split | train: 15, val: 6, test: 5 |
+| Usable annotated images | 38 |
+| Physical coins represented | 17 (`C001`, `C002`, `C004`–`C018`) |
+| Available split | train: 24, val: 7, test: 7 |
 | Class mapping | `0=dent`, `1=scratch`, `2=stain_corrosion` |
 | Image source | self-captured only |
-| Normal images | 7 empty-label images |
+| Normal images | 11 empty-label images |
 | Image geometry | Roboflow `Fit within`; original aspect ratios preserved |
 | Validation status | `src/validate_dataset.py` passed |
 
@@ -66,18 +75,90 @@ it produced no boxes for any test image, including the one `dent` and one
 `stain_corrosion` image. The test split has no `scratch` ground truth, so no
 metric, prediction, or threshold from this run is evidence of detector quality.
 
+## Dent-only experiment result
+
+`src/build_dent_dataset.py` produced a single-class dent dataset with 25
+images: train 15, val 4, test 6. Its groups are isolated by `coin_id`; train
+contains six dent coins, validation two, and test only one dent coin (`C009`).
+Images containing other defect classes are excluded rather than converted to
+negative samples.
+
+The 100-epoch, 640px CPU run with Mosaic disabled completed under
+`runs/detect/baseline/dent-v1-yolo11n-cpu-e100-i640-m0-s0/`. Held-out inference
+at confidence 0.25 saved annotated images and JSON under
+`outputs/dent-evaluation/dent-v1-yolo11n-cpu-e100-i640-m0-s0/`. It missed the
+C009 dent and produced false-positive dent boxes on normal C006 and C018
+images. This is a useful failure analysis artifact, not a successful detector.
+
+A follow-up diagnosis used the same `best.pt` without retraining. On the 15
+train images at confidence 0.05, 6 of 10 ground-truth dents matched at
+IoU ≥ 0.5, but matched confidences were 0.06–0.48 (none ≥ 0.5), C015 was a
+complete miss, and all five empty-label train images produced false positives
+(75 boxes total). That is result B: the model does not fit its own training
+samples at a usable score. At confidence 0.01 the C009 ground-truth box is
+matched (IoU 0.73) at confidence 0.018, while the same image is flooded with
+weak `dent` boxes; `last.pt` at 0.05 produced zero test boxes. Evidence is
+under `outputs/dent-evaluation/diag-train-conf005/`,
+`diag-test-conf001/`, and `diag-test-lastpt/`. The next dent experiment is an
+augmentation-off overfit run, not more data and not a C009 reshoot.
+
+## Reviewed rim-dent experiment result
+
+Manual review retained ten outer-rim deformation labels and converted two face
+dents plus two ambiguous design-region labels into target-negative hard
+examples. `src/build_rim_dent_dataset.py` produced 25 leakage-checked images:
+train 13 (7 positive), validation 6 (2 positive), and test 6 (1 positive).
+The full C011 group moved to validation; C009 remained sealed in test.
+
+The controlled `yolo11n.pt` run kept 640px inputs, CPU, 100 epochs, batch size
+2, seed 0, deterministic mode, and Mosaic disabled. `last.pt` correctly
+localised 7/7 train rim labels at confidence 0.25 with 0/6 target-negative
+false positives. `best.pt` localised 0/7 train and 0/2 C011 validation rims at
+that threshold; `last.pt` also localised 0/2 validation rims. The frozen
+`best.pt` then produced no boxes on C009 or any of the five test negatives.
+
+This proves the current model and pipeline can memorise the reviewed training
+labels, but it does not learn a cross-coin rim representation. The validation
+fitness peak (`mAP50=0.054`, `mAP50-95=0.011`) is diagnostic only because it
+comes from two positive images of one physical coin at low validation
+confidence.
+
+## Hosted Workflow integration status
+
+`src/inference_roboflow.py` now sends one local image to the published
+`coin-defect-hybrid` version 9 Workflow. Its contract was verified through
+Roboflow MCP: one `image` input, no declared parameters, and one JSON
+`predictions` output. The client keeps the API key in `ROBOFLOW_API_KEY`,
+validates TLS, retries transient failures, and externalises base64 image
+outputs.
+
+Local request encoding, retries, response handling, source hashing, and
+acceptance gates pass eight standard-library unit tests. The opt-in live test
+is fixed to v9 `C005_03` with SHA-256
+`d1ac6fdf0170266bf02bf89b91176e9c64cee415eb303e397e4857167a34aec0`
+and requires both the `predictions` output and a `scratch` detection.
+
+Live execution reached Roboflow with a valid key but returned HTTP 500 after
+all retries on 2026-08-17. MCP reproduced the failure for both the direct t2
+model (`46ecb284e6bd8db56380dbf5732bf501`) and the published Workflow
+(`6dedb323169641584dd70b12ebc8eafe`); the bug report was recorded by Roboflow.
+Failure runs now save timestamped, secret-free evidence under ignored outputs.
+No real prediction response has been accepted as evidence.
+
 ## Current blocker
 
-The grouped train/val/test flow now works and validation contains all three
-classes, but the dataset remains too small. The test split lacks `scratch` and
-has only one labelled example each for `dent` and `stain_corrosion`, so it
-cannot support a credible performance claim or defect-recall measurement.
+The rim-only task definition and grouped flow now work, and training-set
+memorisation is confirmed. The blocker is cross-coin generalisation: both C011
+validation rims and the C009 test rim were missed at confidence 0.25. There are
+only five physical rim-positive coins in v2 training, one in validation, and
+one in test.
 
 ## Next milestone
 
-Collect more independent coins so validation and test contain all defect
-classes and normal images. Every physical coin must remain in one split before
-augmentation.
+Collect independently confirmed rim-deformed coins under the same capture
+protocol before tuning the model. Keep every physical coin in one split,
+expand validation and test beyond one positive coin each, then repeat the
+frozen evaluation protocol.
 
 ## Claims we can make
 
@@ -86,6 +167,10 @@ augmentation.
 - The pilot manifest and local export pass structural validation.
 - The corrected 640px CPU baseline and its checkpoint test-validation workflow
   completed reproducibly on the aspect-ratio-preserving local dataset.
+- The dent-only curation and held-out evidence workflow works, including an
+  explicit negative result.
+- The reviewed rim-only model can memorise its seven training positives while
+  rejecting its six training target-negatives at confidence 0.25.
 
 ## Claims we cannot make
 

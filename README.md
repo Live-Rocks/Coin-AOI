@@ -58,6 +58,65 @@ The script writes these files to `outputs/inference/`:
 - `detections_<image-name>.json`: each prediction's class, confidence, and
   bounding-box coordinates.
 
+## 4. Run the hosted Roboflow workflow
+
+The project also has a minimal hosted inference path for the published
+`coin-defect-hybrid` version 9 workflow. Put a private API key in a local
+`.env` file; `.env` is ignored by Git:
+
+```text
+ROBOFLOW_API_KEY=your-private-key
+```
+
+Load the variable and run one image:
+
+```bash
+set -a
+source .env
+set +a
+python src/inference_roboflow.py --source data/local/coin.jpg
+```
+
+The script uploads the image to Roboflow serverless inference, uses a 120-second
+timeout, and retries transient failures twice with exponential backoff. It
+writes the response keys and compact JSON to `outputs/roboflow-inference/`.
+Any base64 image outputs are decoded into separate files rather than embedded
+in the JSON. Override the network defaults with `--timeout` and `--retries`.
+
+The reproducible hosted smoke gate uses the exact Roboflow v9 `C005_03` test
+image and requires both the declared output and the expected scratch class:
+
+```bash
+python src/inference_roboflow.py \
+  --source data/local/roboflow-smoke/C005_03.png \
+  --source-url https://source.roboflow.com/RBizhxjW0kge5Flii3Wlp7jUK8g2/vGVZc5ZRWDsD2KfIlyLh/original.jpg \
+  --expect-output predictions \
+  --expect-class scratch \
+  --output-dir outputs/roboflow-smoke
+```
+
+The fixed image SHA-256 is
+`d1ac6fdf0170266bf02bf89b91176e9c64cee415eb303e397e4857167a34aec0`.
+Successful JSON records the source hash, timestamp, observed output keys,
+classes, and acceptance result. Hosted errors write a secret-free
+`failure_C005_03.json` evidence file. The equivalent credit-consuming live
+test is opt-in:
+
+```bash
+RUN_ROBOFLOW_LIVE=1 \
+python -m unittest discover \
+  -s tests -p 'test_inference_roboflow.py' -v
+```
+
+Never commit or paste the private key into source code. Version 9 is currently
+a pipeline smoke test; successful hosted inference does not by itself establish
+accuracy or generalisation. As last verified on 2026-08-17, the Workflow
+contract was available but both its MCP and REST executions returned HTTP 500.
+The latest failures were reported to Roboflow with direct-model reference
+`46ecb284e6bd8db56380dbf5732bf501` and Workflow reference
+`6dedb323169641584dd70b12ebc8eafe`. That is a hosted execution blocker, not a
+successful inference result.
+
 ## Key terms
 
 - **Pretrained model**: a model already trained on a large general-purpose
@@ -137,7 +196,7 @@ python src/train_baseline.py \
   --run-name yolo11n-cpu-e100-s0-fit640
 ```
 
-The script validates the 26-image grouped dataset first, then fine-tunes
+The script validates the grouped dataset first, then fine-tunes
 `yolo11n.pt` using CPU, 640px images, batch size 2, seed 0,
 deterministic mode, zero dataloader workers, and no cache. It then loads
 `best.pt` and runs an Ultralytics validation pass on the test split. Outputs are
@@ -145,10 +204,81 @@ local-only under `runs/detect/baseline/`, so this does not overwrite the smoke
 run.
 
 This baseline is a reproducible pipeline artifact, not model evaluation. The
-test split contains three normal images plus one `dent` and one
+current test split contains five normal images plus one `dent` and one
 `stain_corrosion` image, but no `scratch` ground truth. The validation and test
 sets are far too small for mAP, precision, recall, prediction thresholds, empty
 predictions, or PASS/FAIL results to have a quality interpretation.
+
+## Dent-only recognition experiment
+
+`src/build_dent_dataset.py` creates a separate one-class dataset from manifest
+rows that contain only `dent` or are confirmed normal. It excludes images with
+`scratch` or `stain_corrosion` so they are not incorrectly treated as negative
+examples:
+
+```bash
+python src/build_dent_dataset.py --replace
+python src/validate_dataset.py \
+  --dataset-root datasets/coin-dent-v1 \
+  --manifest data/dent_dataset_manifest.csv \
+  --class-names dent
+```
+
+The first controlled experiment used 640px inputs, CPU, 100 epochs, and Mosaic
+disabled:
+
+```bash
+python src/train_baseline.py \
+  --dataset-config datasets/coin-dent-v1/data.yaml \
+  --manifest data/dent_dataset_manifest.csv \
+  --class-names dent \
+  --epochs 100 --imgsz 640 --mosaic 0 \
+  --run-name dent-v1-yolo11n-cpu-e100-i640-m0-s0
+```
+
+It did not detect the held-out C009 dent at confidence 0.25 and produced false
+positive dent boxes on normal test images. This is an honest negative result,
+not a usable detector. The per-image evidence can be reproduced with:
+
+```bash
+python src/evaluate_dent.py \
+  --model runs/detect/baseline/dent-v1-yolo11n-cpu-e100-i640-m0-s0/weights/best.pt \
+  --output-dir outputs/dent-evaluation/dent-v1-yolo11n-cpu-e100-i640-m0-s0
+```
+
+## Reviewed rim-dent experiment
+
+A manual review narrowed the target to visible outer-rim deformation. Ten
+existing labels were retained as `rim_dent`; two face dents and two ambiguous
+design-region marks became target-negative hard examples. The complete C011
+coin group moved from train to validation, while C009 remained sealed in test:
+
+```bash
+python src/build_rim_dent_dataset.py --replace
+python src/validate_dataset.py \
+  --dataset-root datasets/coin-rim-dent-v2 \
+  --manifest data/rim_dent_v2_manifest.csv \
+  --class-names rim_dent
+```
+
+The resulting 25-image dataset contains 7/2/1 positive images and 6/4/5
+target-negative images across train/validation/test. The controlled run kept
+the previous model and training settings:
+
+```bash
+python src/train_baseline.py \
+  --dataset-config datasets/coin-rim-dent-v2/data.yaml \
+  --manifest data/rim_dent_v2_manifest.csv \
+  --class-names rim_dent \
+  --epochs 100 --imgsz 640 --mosaic 0 \
+  --run-name rim-dent-v2-yolo11n-cpu-e100-i640-m0-s0
+```
+
+`last.pt` memorised all seven train rim labels at confidence 0.25 without a
+false positive on the six train target-negatives. Neither checkpoint detected
+the two held-out C011 validation rims at that threshold. The frozen `best.pt`
+then missed C009 and produced no boxes on any of the five test negatives. This
+isolates a cross-coin generalisation failure; it is not a usable rim detector.
 
 ## Documentation
 
