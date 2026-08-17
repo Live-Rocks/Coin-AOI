@@ -1,4 +1,4 @@
-"""Run a reproducible CPU YOLO baseline on the local MVP dataset."""
+"""Run a reproducible CPU YOLO baseline on a validated local dataset."""
 
 from __future__ import annotations
 
@@ -23,6 +23,23 @@ def parse_args() -> argparse.Namespace:
         description="Train and test a reproducible CPU YOLO baseline."
     )
     parser.add_argument(
+        "--dataset-config",
+        type=Path,
+        default=DATASET_CONFIG,
+        help=f"YOLO dataset YAML path (default: {DATASET_CONFIG}).",
+    )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("data/manifest.csv"),
+        help="Manifest paired with the selected dataset.",
+    )
+    parser.add_argument(
+        "--class-names",
+        default="dent,scratch,stain_corrosion",
+        help="Comma-separated class names in YOLO ID order.",
+    )
+    parser.add_argument(
         "--epochs",
         type=int,
         default=DEFAULT_EPOCHS,
@@ -38,26 +55,45 @@ def parse_args() -> argparse.Namespace:
         "--run-name",
         help="Optional output directory name under runs/detect/baseline/.",
     )
+    parser.add_argument(
+        "--mosaic",
+        type=float,
+        default=1.0,
+        help="YOLO mosaic augmentation probability from 0.0 to 1.0 (default: 1.0).",
+    )
     args = parser.parse_args()
     if args.epochs < 1:
         parser.error("--epochs must be at least 1.")
     if args.imgsz < 32 or args.imgsz % 32:
         parser.error("--imgsz must be a multiple of 32 and at least 32.")
+    if not 0.0 <= args.mosaic <= 1.0:
+        parser.error("--mosaic must be between 0.0 and 1.0.")
     return args
 
 
 def main() -> None:
     """Validate the dataset, then run a reproducible CPU baseline."""
     args = parse_args()
-    validate_dataset([])
+    validate_dataset(
+        [
+            "--dataset-root",
+            str(args.dataset_config.parent),
+            "--manifest",
+            str(args.manifest),
+            "--class-names",
+            args.class_names,
+        ]
+    )
 
-    if not DATASET_CONFIG.is_file():
-        raise FileNotFoundError(f"Dataset configuration not found: {DATASET_CONFIG}")
+    if not args.dataset_config.is_file():
+        raise FileNotFoundError(
+            f"Dataset configuration not found: {args.dataset_config}"
+        )
 
     run_name = args.run_name or f"yolo11n-cpu-e{args.epochs}-s0-i{args.imgsz}"
     model = YOLO(MODEL_NAME)
     model.train(
-        data=str(DATASET_CONFIG),
+        data=str(args.dataset_config),
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=2,
@@ -66,6 +102,7 @@ def main() -> None:
         deterministic=True,
         workers=0,
         cache=False,
+        mosaic=args.mosaic,
         project=RUN_PROJECT,
         name=run_name,
         exist_ok=False,
@@ -76,7 +113,7 @@ def main() -> None:
         raise FileNotFoundError(f"Baseline checkpoint not found: {best_weights}")
 
     YOLO(str(best_weights)).val(
-        data=str(DATASET_CONFIG),
+        data=str(args.dataset_config),
         split="test",
         imgsz=args.imgsz,
         batch=2,

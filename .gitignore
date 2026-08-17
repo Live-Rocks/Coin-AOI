@@ -1,5 +1,6 @@
 # Python virtual environment and cache files
 .venv/
+.env
 __pycache__/
 *.py[cod]
 
@@ -22,3 +23,7 @@ datasets/coin-defect-hybrid/images/
 datasets/coin-defect-hybrid/labels/
 datasets/coin-defect-hybrid/README.dataset.txt
 datasets/coin-defect-hybrid/README.roboflow.txt
+datasets/coin-dent-v1/images/
+datasets/coin-dent-v1/labels/
+datasets/coin-rim-dent-v2/images/
+datasets/coin-rim-dent-v2/labels/

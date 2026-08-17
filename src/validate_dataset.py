@@ -9,7 +9,7 @@ from collections import defaultdict
 from pathlib import Path
 
 
-CLASS_NAMES = ("dent", "scratch", "stain_corrosion")
+DEFAULT_CLASS_NAMES = ("dent", "scratch", "stain_corrosion")
 SPLITS = ("train", "val", "test")
 IMAGE_EXTENSIONS = {".bmp", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 MANIFEST_COLUMNS = {
@@ -41,7 +41,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=Path("data/manifest.csv"),
         help="CSV created from data/manifest_template.csv.",
     )
+    parser.add_argument(
+        "--class-names",
+        default=",".join(DEFAULT_CLASS_NAMES),
+        help="Comma-separated class names in YOLO ID order.",
+    )
     return parser.parse_args(argv)
+
+
+def parse_class_names(value: str) -> tuple[str, ...]:
+    """Validate a comma-separated class mapping from the command line."""
+    class_names = tuple(name.strip() for name in value.split(",") if name.strip())
+    if not class_names:
+        raise ValueError("At least one class name is required.")
+    if len(set(class_names)) != len(class_names):
+        raise ValueError("Class names must be unique.")
+    return class_names
 
 
 def read_manifest(path: Path, errors: list[str]) -> dict[str, dict[str, str]]:
@@ -96,7 +111,9 @@ def validate_manifest_splits(
             )
 
 
-def validate_label(label_path: Path, errors: list[str]) -> None:
+def validate_label(
+    label_path: Path, class_names: tuple[str, ...], errors: list[str]
+) -> None:
     for line_number, line in enumerate(
         label_path.read_text(encoding="utf-8").splitlines(), start=1
     ):
@@ -117,10 +134,10 @@ def validate_label(label_path: Path, errors: list[str]) -> None:
             errors.append(f"{label_path}:{line_number}: values must be numeric.")
             continue
 
-        if not 0 <= class_id < len(CLASS_NAMES):
+        if not 0 <= class_id < len(class_names):
             errors.append(
                 f"{label_path}:{line_number}: class_id {class_id} is not in "
-                f"0..{len(CLASS_NAMES) - 1}."
+                f"0..{len(class_names) - 1}."
             )
         if not 0 <= x_center <= 1 or not 0 <= y_center <= 1:
             errors.append(
@@ -150,6 +167,7 @@ def manifest_image_id(exported_image_id: str) -> str:
 def validate_export(
     dataset_root: Path,
     manifest: dict[str, dict[str, str]],
+    class_names: tuple[str, ...],
     errors: list[str],
 ) -> int:
     image_ids: set[str] = set()
@@ -187,7 +205,7 @@ def validate_export(
                     "Normal images require an empty label file."
                 )
                 continue
-            validate_label(label_path, errors)
+            validate_label(label_path, class_names, errors)
 
         for label_path in label_dir.glob("*.txt"):
             if not any(image_path.stem == label_path.stem for image_path in images):
@@ -203,9 +221,13 @@ def validate_export(
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     errors: list[str] = []
+    try:
+        class_names = parse_class_names(args.class_names)
+    except ValueError as error:
+        raise SystemExit(f"Dataset validation failed: {error}") from error
     manifest = read_manifest(args.manifest, errors)
     validate_manifest_splits(manifest, errors)
-    image_count = validate_export(args.dataset_root, manifest, errors)
+    image_count = validate_export(args.dataset_root, manifest, class_names, errors)
 
     if errors:
         print(f"Dataset validation failed with {len(errors)} issue(s):")
@@ -216,7 +238,7 @@ def main(argv: list[str] | None = None) -> None:
     print(
         "Dataset validation passed: "
         f"{image_count} images, {len(manifest)} manifest rows, "
-        f"classes={', '.join(CLASS_NAMES)}."
+        f"classes={', '.join(class_names)}."
     )
 
 

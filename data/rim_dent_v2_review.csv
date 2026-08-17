@@ -1,0 +1,15 @@
+image_id,decision,reason
+self_C001_02,exclude_design,Small ambiguous mark near coin relief is not a rim deformation
+self_C001_04,exclude_design,Small ambiguous mark near coin relief is not a rim deformation
+self_C005_02,keep_rim,Visible deformation of the outer coin rim
+self_C005_05,exclude_face,Visible defect is on the coin face rather than the rim
+self_C005_09,keep_rim,Visible deformation of the outer coin rim
+self_C009_01,keep_rim,Visible deformation of the outer coin rim
+self_C011_01,keep_rim,Visible deformation of the outer coin rim
+self_C011_02,keep_rim,Visible deformation of the outer coin rim
+self_C012_01,keep_rim,Visible deformation of the outer coin rim
+self_C012_02,keep_rim,Visible deformation of the outer coin rim
+self_C013_01,keep_rim,Visible deformation of the outer coin rim
+self_C014_01,keep_rim,Visible deformation of the outer coin rim
+self_C015_01,keep_rim,Visible deformation of the outer coin rim
+self_C016_01,exclude_face,Visible defect is on the coin face rather than the rim

@@ -1,0 +1,34 @@
+{
+  "source_root": "datasets/coin-defect-hybrid",
+  "output_root": "datasets/coin-dent-v1",
+  "class_names": [
+    "dent"
+  ],
+  "selected_images": 25,
+  "split_image_counts": {
+    "val": 4,
+    "train": 15,
+    "test": 6
+  },
+  "split_coin_ids": {
+    "train": [
+      "C005",
+      "C007",
+      "C011",
+      "C012",
+      "C013",
+      "C014",
+      "C015",
+      "C017"
+    ],
+    "val": [
+      "C001",
+      "C016"
+    ],
+    "test": [
+      "C006",
+      "C009",
+      "C018"
+    ]
+  }
+}

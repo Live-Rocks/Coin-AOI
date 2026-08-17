@@ -77,3 +77,12 @@ the class order used by the current Roboflow export:
 1 scratch
 2 stain_corrosion
 ```
+
+## Dent-only experiment dataset
+
+Use `python src/build_dent_dataset.py --replace` to derive
+`datasets/coin-dent-v1/` and `data/dent_dataset_manifest.csv`. The builder
+keeps only rows labelled exactly `dent` plus confirmed normal rows, then
+preserves only YOLO class `0` labels. It excludes mixed-defect images so
+unlabelled scratch or corrosion does not become a false negative for the
+single-class experiment.

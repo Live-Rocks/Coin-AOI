@@ -141,3 +141,65 @@ Training and inference now use correctly proportioned coin images. The
 corrected dataset remains only 26 images from nine coins, with no `scratch`
 ground truth in test; the 640px run and its test predictions must not be used
 as evidence of detector accuracy, generalisation, or PASS/FAIL performance.
+
+## D007 — Isolate a dent-only experiment and retain negative evidence
+
+Date: 2026-08-17
+Status: Accepted
+
+### Context
+
+The hybrid taxonomy includes `dent`, `scratch`, and `stain_corrosion`, but the
+first milestone is to localise one defect type. Mixed-defect images would be
+unsafe as negative samples in a one-class detector because their non-dent
+defects would be unlabelled. The expanded hybrid dataset has 38 annotated
+images from 17 coins, while the curated dent-only dataset has 25 images and
+only one dent coin in test.
+
+### Decision
+
+Build `coin-dent-v1` only from rows labelled exactly `dent` and confirmed normal
+rows; retain class `0=dent` labels and exclude mixed-defect rows. Train
+`yolo11n.pt` at 640px on CPU for 100 epochs with Mosaic disabled, then save one
+fixed-threshold qualitative inference pass on the held-out test split.
+
+### Consequences
+
+The initial dent run missed the C009 dent and produced false positives on
+normal C006 and C018 images at confidence 0.25. Preserve these annotated images
+and JSON as portfolio evidence of an honest failed experiment. Do not adjust
+the test threshold or claim dent recognition from this run; collect another
+independent test dent coin and more train-side variation before rerunning.
+
+## D008 — Narrow the target to reviewed outer-rim deformation
+
+Date: 2026-08-17
+Status: Accepted
+
+### Context
+
+The dent-v1 labels mix outer-rim deformation, coin-face dents, and two
+ambiguous marks near intentional relief. A checkpoint comparison showed that
+`last.pt` could memorise reviewed rim labels, while the validation split
+contained no rim-positive image and therefore could not select a checkpoint
+for the intended task.
+
+### Decision
+
+Define the next target as `rim_dent`: a visible impact deformation of the outer
+coin rim. Retain the four non-rim images as target-negative hard examples,
+move the complete C011 coin group to validation, and keep C009 sealed in test.
+Train `yolo11n.pt` with the same 100-epoch, 640px, CPU, batch-2, seed-0,
+Mosaic-disabled recipe so annotation scope and split are the controlled
+variables.
+
+### Consequences
+
+The generated v2 dataset has 7/2/1 positive images across
+train/validation/test. `last.pt` localised all seven train rims at confidence
+0.25 with no train target-negative false positives, but neither checkpoint
+localised either C011 validation rim. Frozen `best.pt` also missed C009 while
+remaining empty on all five test negatives. Preserve this as evidence that the
+pipeline can memorise the reviewed task but does not yet generalise across
+physical coins. Do not tune from the C009 result or claim rim-detection
+performance.
