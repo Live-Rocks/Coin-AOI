@@ -1,0 +1,9 @@
+path: data/roboflow/v13-cloud-augmented
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: dent
+  1: scratch
+  2: stain_corrosion
