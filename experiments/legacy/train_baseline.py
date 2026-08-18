@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-from validate_dataset import main as validate_dataset
+from src.validate_dataset import main as validate_dataset
 
 
 DATASET_CONFIG = Path("datasets/coin-defect-hybrid/data.yaml")
