@@ -1,0 +1,55 @@
+{
+  "experiment_id": "v13-yolo11n-cpu-e100-i640-s0",
+  "dataset_version": "v13-cloud-augmented",
+  "model": "yolo11n.pt",
+  "training": {
+    "environment": "Apple M2 CPU",
+    "ultralytics_version": "8.4.120",
+    "epochs": 100,
+    "image_size": 640,
+    "batch_size": 2,
+    "seed": 0,
+    "deterministic": true,
+    "optimizer": "auto",
+    "online_augmentation": false,
+    "runtime_hours": 1.157
+  },
+  "gate": {
+    "confidence_threshold": 0.25,
+    "matching_iou_threshold": 0.5,
+    "status": "failed"
+  },
+  "cases": [
+    {
+      "case_id": "C005_03",
+      "expected_class": "scratch",
+      "detections": [],
+      "matched_iou": null,
+      "passed": false,
+      "artifact": "c005-scratch-missed.jpg"
+    },
+    {
+      "case_id": "C006_01",
+      "expected_class": null,
+      "detections": [],
+      "matched_iou": null,
+      "passed": true,
+      "artifact": "c006-normal-clear.jpg"
+    },
+    {
+      "case_id": "C013_01",
+      "expected_class": "dent",
+      "detections": [
+        {
+          "class_name": "dent",
+          "confidence": 0.3209
+        }
+      ],
+      "matched_iou": 0.744,
+      "passed": true,
+      "artifact": "c013-dent-detected.jpg"
+    }
+  ],
+  "conclusion": "The reproducible pipeline works, but the frozen three-case smoke gate failed because C005_03 scratch was missed.",
+  "limitations": "The test split contains only three images and two ground-truth instances. These results are pipeline evidence, not an accuracy or generalisation claim."
+}

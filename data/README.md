@@ -15,6 +15,19 @@ These directories are intentionally ignored by Git:
 Do not upload an image to Roboflow until its row exists in the manifest and its
 source and license have been checked.
 
+## Dataset versions
+
+| Dataset layer | Count | Split or purpose |
+| --- | ---: | --- |
+| Curated historical dataset | 38 | Pre-v13 manifest-backed captures |
+| v13 source images | 40 | Before Roboflow offline augmentation |
+| v13 YOLO export | 102 | `93 train / 6 validation / 3 test` |
+
+The counts describe different layers, not conflicting current totals. The v13
+train split contains three exported variants for each of 31 source images;
+validation and test contain six and three unaugmented images respectively.
+Group assignment happens before augmentation.
+
 ## MVP phone capture checklist
 
 Use this simple setup to verify the full dataset flow:
@@ -78,9 +91,31 @@ the class order used by the current Roboflow export:
 2 stain_corrosion
 ```
 
+## Current v13 export
+
+Download the selected v13 YOLO export to:
+
+```text
+data/roboflow/v13-cloud-augmented/
+├── train/{images,labels}/
+├── valid/{images,labels}/
+└── test/{images,labels}/
+```
+
+The tracked descriptor is `datasets/coin-defect-v13/data.yaml`. The current
+preflight requires exactly 93 train, 6 validation, and 3 test image/label
+pairs. It validates normalized class IDs and boxes and converts the six polygon
+scratch rows to enclosing detection boxes.
+
+The export already contains offline rotation, brightness, and grayscale
+augmentation. The local reference run therefore disables additional
+Ultralytics augmentation. Roboflow's separate cloud model was configured for
+300 epochs; the reproducible local reference uses 100 epochs and is documented
+as a different run.
+
 ## Dent-only experiment dataset
 
-Use `python src/build_dent_dataset.py --replace` to derive
+Use `python -m experiments.legacy.build_dent_dataset --replace` to derive
 `datasets/coin-dent-v1/` and `data/dent_dataset_manifest.csv`. The builder
 keeps only rows labelled exactly `dent` plus confirmed normal rows, then
 preserves only YOLO class `0` labels. It excludes mixed-defect images so

@@ -203,3 +203,40 @@ remaining empty on all five test negatives. Preserve this as evidence that the
 pipeline can memorise the reviewed task but does not yet generalise across
 physical coins. Do not tune from the C009 result or claim rim-detection
 performance.
+
+## D009 — Freeze the v13 local smoke protocol
+
+Date: 2026-08-18
+Status: Accepted
+
+### Context
+
+Roboflow v13 contains 40 pre-augmentation source images and 102 exported
+files: 93 train, 6 validation, and 3 test. The train split already includes
+offline rotation, brightness, and grayscale augmentation. Six scratch rows are
+polygon annotations, while the project trains an object detector. An older
+relative dataset descriptor could also resolve the train path to a different
+14-image export.
+
+### Decision
+
+Track a descriptor that resolves v13 explicitly. Before training, require
+`93/6/3`, paired image and label files, legal class IDs and coordinates, and
+polygon-to-box conversion. Run a one-epoch preflight, then restart from the
+original `yolo11n.pt` for 100 CPU epochs at 640px, batch 2, seed 0,
+deterministic mode, zero workers, no image cache, and no additional online
+augmentation.
+
+Select `best.pt` as the primary checkpoint before testing. Freeze confidence
+0.25 and same-class matching IoU 0.50. Require a matched C005 scratch, a
+matched C013 dent, and zero C006 detections. Do not change the split, threshold,
+or training recipe after inspecting the primary result.
+
+### Consequences
+
+The formal gate failed because C005 scratch was missed; C013 dent matched at
+IoU 0.744 and C006 remained clear. `last.pt @ 0.25` and `best.pt @ 0.05` also
+missed scratch. Preserve this as reproducible pipeline and failure-analysis
+evidence, not a generalisation or accuracy claim. The separate Roboflow cloud
+run used 300 epochs and must not be treated as directly comparable without its
+full engine and evaluation configuration.
