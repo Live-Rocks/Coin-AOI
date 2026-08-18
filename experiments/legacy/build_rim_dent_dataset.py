@@ -9,7 +9,7 @@ import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from build_dent_dataset import (
+from experiments.legacy.build_dent_dataset import (
     SPLITS,
     dent_label_content,
     prepare_output,

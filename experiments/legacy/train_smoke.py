@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from ultralytics import YOLO
 
-from validate_dataset import main as validate_dataset
+from src.validate_dataset import main as validate_dataset
 
 
 DATASET_CONFIG = Path("datasets/coin-defect-hybrid/data.yaml")
@@ -15,8 +16,14 @@ RUN_PROJECT = "runs/smoke"
 RUN_NAME = "yolo11n-mps-s0"
 
 
+def parse_args() -> argparse.Namespace:
+    """Expose standard CLI help while preserving the parameter-free run."""
+    return argparse.ArgumentParser(description=__doc__).parse_args()
+
+
 def main() -> None:
     """Validate the local dataset, then complete one MPS training epoch."""
+    parse_args()
     validate_dataset()
 
     if not DATASET_CONFIG.is_file():

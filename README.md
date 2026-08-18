@@ -1,286 +1,156 @@
 # Coin-AOI
 
-Coin-AOI is a computer-vision learning prototype: capture coin photos, label
-defects, fine-tune YOLO11n, and evaluate whether the model generalises. It is
-**not** a usable coin-defect detector and not an industrial AOI system.
+Coin-AOI is a portfolio computer-vision project that turns self-captured coin
+images into a reproducible object-detection experiment: annotate defects,
+validate the dataset, fine-tune YOLO11n, and evaluate a frozen checkpoint with
+an explicit smoke gate.
 
-The pipeline that exists today:
+The engineering pipeline is complete and reviewable. The current model is not
+a production inspector: it detects the held-out dent case and rejects the
+normal case, but misses the held-out scratch case.
 
-```text
-self-captured coins → Roboflow labels → YOLO11n fine-tune
-→ train can memorise reviewed rim labels
-→ held-out coins fail
-→ hosted Roboflow API is wired, but the cloud endpoint returns HTTP 500
+![YOLO11n dent detection on C013](artifacts/v13-yolo11n/c013-dent-detected.jpg)
+
+## Current status
+
+| Item | Verified state |
+| --- | --- |
+| Dataset | Roboflow v13 export, 102 images (`93/6/3`) |
+| Local model | YOLO11n, 100 epochs, CPU, 640px, batch 2, seed 0 |
+| Fixed gate | Confidence `0.25`, same-class IoU `0.50` |
+| Outcome | **Failed**: dent and normal passed; scratch was missed |
+| Interpretation | Pipeline evidence only; the test split is too small for an accuracy claim |
+
+## What I built
+
+- Python CLIs for inference, dataset validation, training, and fixed evaluation.
+- A leakage-aware data workflow that keeps captures of one physical coin in a
+  single train, validation, or test group.
+- YOLO box parsing with automatic polygon-to-box conversion and class-ID checks.
+- Reproducible CPU training with fixed seed, deterministic mode, and online
+  augmentation disabled for an already augmented export.
+- A three-image acceptance gate with same-class IoU matching, per-image JSON,
+  annotated predictions, and preserved failure diagnostics.
+- Unit tests for path resolution, label conversion, matching, misses, false
+  positives, and a secret-safe Roboflow REST client.
+- An AI-assisted development workflow in which generated code and experiment
+  ideas are constrained by tests, frozen gates, and manually verified claims.
+
+## Current v13 pipeline
+
+```mermaid
+flowchart LR
+    capture["Self-captured coin images"] --> annotate["Roboflow annotation"]
+    annotate --> version["Frozen v13 export"]
+    version --> validate["Pairing, class, split, polygon validation"]
+    validate --> train["YOLO11n CPU training"]
+    train --> checkpoint["best.pt and last.pt"]
+    checkpoint --> test["Ultralytics test validation"]
+    checkpoint --> gate["Fixed confidence and IoU gate"]
+    gate --> evidence["JSON and annotated evidence"]
 ```
 
-That negative result is the main finding. After 100 epochs, `last.pt` localised
-all seven training `rim_dent` boxes at confidence 0.25 and rejected the six
-training target-negatives. The same checkpoint missed both held-out validation
-rims and the sealed test coin. This is overfitting / failed cross-coin
-generalisation, not a missing confidence threshold.
+## Frozen smoke result
 
-## What this repo demonstrates
+| Case | Expected | Prediction at 0.25 | IoU | Result |
+| --- | --- | --- | ---: | --- |
+| `C005_03` | `scratch` | none | — | **Fail** |
+| `C006_01` | no defect | none | — | Pass |
+| `C013_01` | `dent` | `dent` at 0.321 | 0.744 | Pass |
 
-- Python: isolated venv, Ultralytics YOLO, dataset validation, and evaluation
-  scripts that turn one idea into a runnable experiment.
-- Object detection: YOLO11n fine-tuning, grouped train/val/test splits, and
-  single-image inference with JSON plus annotated-image output.
-- ML basics: training versus validation, leakage-aware `coin_id` splits, loss
-  and mAP as diagnostics, and an explicit train-memorisation versus
-  generalisation check.
-- AI-assisted development: the repo was built and diagnosed in Cursor, with
-  API keys kept out of Git.
+The blank [C005 prediction](artifacts/v13-yolo11n/c005-scratch-missed.jpg)
+is a missed ground-truth scratch, not a normal coin. The
+[normal C006 prediction](artifacts/v13-yolo11n/c006-normal-clear.jpg),
+[training curves](artifacts/v13-yolo11n/training-curves.png), and portable
+[smoke summary](artifacts/v13-yolo11n/smoke-summary.json) are tracked for
+review. Extra test metrics are diagnostic only because the split has three
+images and two ground-truth instances.
 
-## 1. Create and activate the environment
+## Quickstart
+
+Create an isolated environment and install the pinned Ultralytics version:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-A virtual environment keeps this project's Python packages separate from other
-projects on your computer.
-
-## 2. Install YOLO
-
-```bash
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-`ultralytics` provides the YOLO model, image preprocessing, inference, and
-bounding-box drawing. On its first use, it downloads the small `yolo11n.pt`
-pretrained weights.
-
-## 3. Run inference on one coin image
-
-The default `src/inference.py` path is an environment check with pretrained
-COCO YOLO11n. Empty boxes are expected; they are not a coin-defect result.
+Run the offline test suite:
 
 ```bash
-mkdir -p data/local
-# Copy your image to data/local/coin.jpg, then run:
-python src/inference.py --source data/local/coin.jpg
+python -m unittest discover -s tests -v
 ```
 
-`data/local/` is ignored by Git. Optional `--confidence` and `--device`
-flags are documented in `python src/inference.py --help`. Outputs go to
-`outputs/inference/` as an annotated image and a JSON file.
+Raw images, Roboflow exports, model weights, and full run directories are not
+committed. Download the v13 YOLO export to
+`data/roboflow/v13-cloud-augmented/`; the tracked
+`datasets/coin-defect-v13/data.yaml` resolves the expected `93/6/3` split.
+See the [dataset workflow](data/README.md) for the data contract.
 
-## 4. Hosted Roboflow client (known external blocker)
-
-`src/inference_roboflow.py` is a dependency-free REST client for the published
-v9 Workflow. It reads `ROBOFLOW_API_KEY` from the environment, retries
-transient failures, and writes compact JSON. As last verified on 2026-08-17,
-Roboflow serverless returns HTTP 500 for both the model and the Workflow.
-That is a cloud-side blocker; the local client and its unit tests already
-exist. Do not treat a 500 as a passing detector.
+Run the one-epoch integration preflight:
 
 ```bash
-set -a
-source .env
-set +a
-python src/inference_roboflow.py --source data/local/coin.jpg
+python src/train_v13.py \
+  --model yolo11n.pt --epochs 1 \
+  --run-name v13-yolo11n-preflight-e1-i640-s0
 ```
 
-The fixed `C005_03` acceptance command, SHA-256, and opt-in live test are in
-the Hosted Workflow notes below if you need to re-run the smoke gate.
+Start a fresh 100-epoch run and test validation:
 
-## Key terms
+```bash
+python src/train_v13.py \
+  --model yolo11n.pt --epochs 100 \
+  --run-name v13-yolo11n-cpu-e100-i640-s0 \
+  --test-after-train
+```
 
-- **Pretrained model**: a model already trained on a large general-purpose
-  dataset. Here it confirms that the software pipeline works.
-- **Bounding box**: a rectangle locating an object in an image.
-- **Confidence**: the model's estimated certainty, from 0 to 1, for a detected
-  class.
-- **Inference**: using a trained model to make predictions on a new image.
+Evaluate the frozen primary checkpoint:
 
-## Important limitation
+```bash
+python src/evaluate_v13.py \
+  --model runs/detect/v13/v13-yolo11n-cpu-e100-i640-s0/weights/best.pt \
+  --output-dir outputs/v13-evaluation/v13-yolo11n-cpu-e100-i640-s0-primary
+```
 
-Do not interpret an empty result as `PASS`. A missing box can mean the
-pretrained COCO model saw no supported class, the fine-tuned model failed to
-generalise, or a hosted endpoint returned an error. Coin-AOI has no
-deterministic quality-control rule.
+The evaluator exits non-zero when the gate fails while still preserving all
+evidence. It does not tune the threshold or retrain from the test result.
 
-## Dataset and annotation
-
-The first custom dataset uses three known defect classes:
+## Repository map
 
 ```text
-0 dent
-1 scratch
-2 stain_corrosion
+src/                  current inference, validation, v13 training and evaluation
+tests/                offline unit tests; hosted live test remains opt-in
+datasets/             tracked YOLO descriptors; images and labels stay local
+data/                 manifests and dataset workflow documentation
+artifacts/            small, public, secret-free experiment evidence
+experiments/legacy/   earlier smoke, baseline, dent, and rim experiments
+docs/                 case study, architecture, experiment log, and decisions
 ```
 
-Read the [dataset workflow](data/README.md) before collecting or exporting
-images, and follow the [annotation guidelines](docs/annotation-guidelines.md)
-when using Roboflow. These documents define the class boundaries, image-source
-records, and group split rule that prevents photos of the same physical coin
-from leaking across train, validation, and test data.
+## Optional hosted integration
 
-The numeric IDs mirror the current Roboflow YOLO export. The order is not a
-quality ranking; it only has to remain consistent in `data.yaml`, label files,
-training, and inference.
+`src/inference_roboflow.py` implements an API-key-safe Roboflow Workflow
+client with bounded retries and compact evidence output. The published v9
+endpoint last returned HTTP 500, so it is documented as an integration failure,
+not a successful demo. Roboflow's separate v13 cloud training used 300 epochs;
+its engine and settings are not treated as directly comparable to the local
+100-epoch run. See the [experiment log](docs/EXPERIMENTS.md).
 
-Download a Roboflow Object Detection export to `data/roboflow/`, then copy the
-selected image/label pairs into `datasets/coin-defect-hybrid/`. Create
-`data/manifest.csv` from the supplied template and validate the local dataset:
+## Limitations and next step
 
-```bash
-cp data/manifest_template.csv data/manifest.csv
-python src/validate_dataset.py
-```
-
-The validator checks that images and labels are paired, normal images have empty
-label files, class IDs are valid, and each `coin_id` appears in only one split.
-Raw images and exported datasets are deliberately ignored by Git; source URLs,
-licenses, and capture details belong in the manifest.
-
-## Fine-tuning smoke test
-
-The earlier one-epoch smoke test verified the initial local data, training,
-validation, and checkpoint pipeline:
-
-```bash
-python src/train_smoke.py
-```
-
-The script validates the dataset first, then fine-tunes `yolo11n.pt` for one
-epoch at 320px with batch size 2. It attempted MPS but used CPU because MPS was
-unavailable at runtime. Its local outputs are ignored by Git.
-
-## CPU training baseline
-
-The initial five-epoch, 320px runs used an earlier Roboflow `Stretch to`
-export. They remain local debugging artifacts only: stretching changed the
-coin geometry, so do not use those runs for model conclusions.
-
-The corrected export uses Roboflow `Fit within`, which preserves image aspect
-ratio. Run the current exploratory baseline at the YOLO11 reference input size:
-
-```bash
-python src/train_baseline.py \
-  --epochs 100 \
-  --imgsz 640 \
-  --run-name yolo11n-cpu-e100-s0-fit640
-```
-
-The script validates the grouped dataset first, then fine-tunes
-`yolo11n.pt` using CPU, 640px images, batch size 2, seed 0,
-deterministic mode, zero dataloader workers, and no cache. It then loads
-`best.pt` and runs an Ultralytics validation pass on the test split. Outputs are
-local-only under `runs/detect/baseline/`, so this does not overwrite the smoke
-run.
-
-This baseline is a reproducible pipeline artifact, not model evaluation. The
-current test split contains five normal images plus one `dent` and one
-`stain_corrosion` image, but no `scratch` ground truth. The validation and test
-sets are far too small for mAP, precision, recall, prediction thresholds, empty
-predictions, or PASS/FAIL results to have a quality interpretation.
-
-## Dent-only recognition experiment
-
-`src/build_dent_dataset.py` creates a separate one-class dataset from manifest
-rows that contain only `dent` or are confirmed normal. It excludes images with
-`scratch` or `stain_corrosion` so they are not incorrectly treated as negative
-examples:
-
-```bash
-python src/build_dent_dataset.py --replace
-python src/validate_dataset.py \
-  --dataset-root datasets/coin-dent-v1 \
-  --manifest data/dent_dataset_manifest.csv \
-  --class-names dent
-```
-
-The first controlled experiment used 640px inputs, CPU, 100 epochs, and Mosaic
-disabled:
-
-```bash
-python src/train_baseline.py \
-  --dataset-config datasets/coin-dent-v1/data.yaml \
-  --manifest data/dent_dataset_manifest.csv \
-  --class-names dent \
-  --epochs 100 --imgsz 640 --mosaic 0 \
-  --run-name dent-v1-yolo11n-cpu-e100-i640-m0-s0
-```
-
-It did not detect the held-out C009 dent at confidence 0.25 and produced false
-positive dent boxes on normal test images. This is an honest negative result,
-not a usable detector. The per-image evidence can be reproduced with:
-
-```bash
-python src/evaluate_dent.py \
-  --model runs/detect/baseline/dent-v1-yolo11n-cpu-e100-i640-m0-s0/weights/best.pt \
-  --output-dir outputs/dent-evaluation/dent-v1-yolo11n-cpu-e100-i640-m0-s0
-```
-
-## Reviewed rim-dent experiment
-
-A manual review narrowed the target to visible outer-rim deformation. Ten
-existing labels were retained as `rim_dent`; two face dents and two ambiguous
-design-region marks became target-negative hard examples. The complete C011
-coin group moved from train to validation, while C009 remained sealed in test:
-
-```bash
-python src/build_rim_dent_dataset.py --replace
-python src/validate_dataset.py \
-  --dataset-root datasets/coin-rim-dent-v2 \
-  --manifest data/rim_dent_v2_manifest.csv \
-  --class-names rim_dent
-```
-
-The resulting 25-image dataset contains 7/2/1 positive images and 6/4/5
-target-negative images across train/validation/test. The controlled run kept
-the previous model and training settings:
-
-```bash
-python src/train_baseline.py \
-  --dataset-config datasets/coin-rim-dent-v2/data.yaml \
-  --manifest data/rim_dent_v2_manifest.csv \
-  --class-names rim_dent \
-  --epochs 100 --imgsz 640 --mosaic 0 \
-  --run-name rim-dent-v2-yolo11n-cpu-e100-i640-m0-s0
-```
-
-`last.pt` memorised all seven train rim labels at confidence 0.25 without a
-false positive on the six train target-negatives. Neither checkpoint detected
-the two held-out C011 validation rims at that threshold. The frozen `best.pt`
-then missed C009 and produced no boxes on any of the five test negatives. This
-isolates a cross-coin generalisation failure; it is not a usable rim detector.
-
-## Hosted Workflow notes
-
-Store `ROBOFLOW_API_KEY` in a local `.env` file that Git ignores. The
-acceptance gate for the published v9 Workflow is:
-
-```bash
-python src/inference_roboflow.py \
-  --source data/local/roboflow-smoke/C005_03.png \
-  --source-url https://source.roboflow.com/RBizhxjW0kge5Flii3Wlp7jUK8g2/vGVZc5ZRWDsD2KfIlyLh/original.jpg \
-  --expect-output predictions \
-  --expect-class scratch \
-  --output-dir outputs/roboflow-smoke
-```
-
-The fixed image SHA-256 is
-`d1ac6fdf0170266bf02bf89b91176e9c64cee415eb303e397e4857167a34aec0`.
-Live failures write `outputs/roboflow-smoke/failure_C005_03.json`. Offline
-client tests:
-
-```bash
-python -m unittest discover -s tests -p 'test_inference_roboflow.py' -v
-```
-
-The credit-consuming live test stays opt-in with `RUN_ROBOFLOW_LIVE=1`.
-Roboflow reference IDs for the 2026-08-17 HTTP 500s are
-`46ecb284e6bd8db56380dbf5732bf501` (model) and
-`6dedb323169641584dd70b12ebc8eafe` (Workflow).
+- This project has no validated production accuracy, real-time camera loop, or
+  deterministic quality-control decision.
+- An empty prediction is not automatically a passing inspection result.
+- The validation and test splits are too small to support a generalisation claim.
+- The next modelling milestone is more independently confirmed scratch and dent
+  examples across physical coins, followed by the same frozen evaluation gate.
 
 ## Documentation
 
-- [Product scope and limitations](docs/PRODUCT.md)
-- [Implemented and planned architecture](docs/ARCHITECTURE.md)
-- [Current verified project status](docs/PROJECT_STATUS.md)
+- [Case study](docs/CASE_STUDY.md)
+- [Implemented architecture](docs/ARCHITECTURE.md)
+- [Experiment history and negative results](docs/EXPERIMENTS.md)
+- [Current verified status](docs/PROJECT_STATUS.md)
 - [Technical and data decisions](docs/DECISIONS.md)
 - [Annotation guidelines](docs/annotation-guidelines.md)
