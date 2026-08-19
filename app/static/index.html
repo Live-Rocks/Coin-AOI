@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Coin-AOI：YOLO 瑕疵偵測研究原型的互動作品集展示。"
+    />
+    <title>Coin-AOI｜YOLO 研究原型</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">COMPUTER VISION PORTFOLIO</p>
+        <h1>Coin-AOI</h1>
+        <p class="subtitle">硬幣瑕疵偵測的 YOLO 研究原型</p>
+      </div>
+      <a class="repository-link" href="https://github.com/Live-Rocks/Coin-AOI" target="_blank" rel="noreferrer">
+        查看專案原始碼
+      </a>
+    </header>
+
+    <main>
+      <section class="notice" aria-labelledby="prototype-notice">
+        <h2 id="prototype-notice">研究原型，不是品質判定系統</h2>
+        <p>
+          此模型目前只展示 <strong>dent</strong>、<strong>scratch</strong>、<strong>stain_corrosion</strong>
+          三類已知瑕疵的偵測流程。
+        </p>
+      </section>
+
+      <section class="workspace" aria-label="圖片推論">
+        <article class="card example-card">
+          <div class="card-heading">
+            <p class="eyebrow">TRY THE MODEL</p>
+            <h2>預設範例</h2>
+          </div>
+          <img
+            class="example-image"
+            src="/static/examples/coin-dent.webp"
+            alt="一枚有 dent 瑕疵的自攝硬幣範例"
+          />
+          <p class="muted">使用專案內公開的自攝範例，直接體驗完整推論流程。</p>
+          <button id="example-button" class="primary-button" type="button">
+            使用此範例圖片
+          </button>
+        </article>
+
+        <article class="card upload-card">
+          <div class="card-heading">
+            <p class="eyebrow">YOUR IMAGE</p>
+            <h2>上傳硬幣圖片</h2>
+          </div>
+          <form id="upload-form">
+            <label id="drop-zone" class="drop-zone" for="image-input">
+              <span class="drop-zone-icon">↑</span>
+              <span>拖放圖片到此處，或點擊選擇檔案</span>
+              <small>JPEG、PNG、WebP；最大 10 MB</small>
+            </label>
+            <input id="image-input" name="image" type="file" accept="image/jpeg,image/png,image/webp" />
+            <p id="selected-file" class="selected-file" aria-live="polite">尚未選擇圖片</p>
+            <button id="upload-button" class="secondary-button" type="submit" disabled>
+              偵測上傳圖片
+            </button>
+          </form>
+        </article>
+      </section>
+
+      <section id="result-section" class="result-section" aria-live="polite">
+        <div class="result-heading">
+          <div>
+            <p class="eyebrow">INFERENCE RESULT</p>
+            <h2 id="result-title">等待圖片輸入</h2>
+          </div>
+          <span id="result-status" class="status">尚未執行</span>
+        </div>
+        <p id="result-message" class="muted">
+          可點選預設範例，或上傳一張 JPEG、PNG、WebP 格式的硬幣圖片。
+        </p>
+        <div id="result-content" class="result-content" hidden>
+          <img id="annotated-image" alt="YOLO 標註後的推論結果" />
+          <div class="detection-panel">
+            <dl class="summary-list">
+              <div><dt>模型</dt><dd id="model-name">—</dd></div>
+              <div><dt>信心閾值</dt><dd id="confidence-threshold">—</dd></div>
+              <div><dt>偵測數量</dt><dd id="detection-count">—</dd></div>
+            </dl>
+            <h3>偵測框</h3>
+            <ul id="detection-list" class="detection-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="evidence" aria-labelledby="evidence-title">
+        <div>
+          <p class="eyebrow">FROZEN SMOKE GATE</p>
+          <h2 id="evidence-title">已保存的實驗證據</h2>
+        </div>
+        <div class="evidence-grid">
+          <a href="/artifacts/v13-yolo11n/c005-scratch-missed.jpg" target="_blank" rel="noreferrer">
+            <img src="/artifacts/v13-yolo11n/c005-scratch-missed.jpg" alt="C005 scratch 漏檢證據" />
+            <span><strong>C005</strong> scratch 漏檢</span>
+          </a>
+          <a href="/artifacts/v13-yolo11n/c006-normal-clear.jpg" target="_blank" rel="noreferrer">
+            <img src="/artifacts/v13-yolo11n/c006-normal-clear.jpg" alt="C006 normal 無偵測證據" />
+            <span><strong>C006</strong> normal 無偵測</span>
+          </a>
+          <a href="/artifacts/v13-yolo11n/c013-dent-detected.jpg" target="_blank" rel="noreferrer">
+            <img src="/artifacts/v13-yolo11n/c013-dent-detected.jpg" alt="C013 dent 偵測成功證據" />
+            <span><strong>C013</strong> dent 偵測成功</span>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Coin-AOI portfolio demo · YOLO11n · fixed confidence threshold 0.25
+    </footer>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

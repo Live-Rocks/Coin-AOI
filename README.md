@@ -82,6 +82,65 @@ Run the offline test suite:
 python -m unittest discover -s tests -v
 ```
 
+## Web portfolio demo
+
+The demo is a single-image YOLO visualisation, not an automated quality-control
+decision. It shows the model's boxes and confidence scores for three known
+classes (`dent`, `scratch`, `stain_corrosion`); no boxes does **not** mean the
+coin passes inspection.
+
+Start it locally with the frozen local checkpoint:
+
+```bash
+MODEL_PATH=runs/detect/v13/v13-yolo11n-cpu-e100-i640-s0/weights/best.pt \
+  .venv/bin/uvicorn app.main:app --reload
+```
+
+Open <http://127.0.0.1:8000>. The page includes a bundled self-captured
+example image, or accepts a JPEG, PNG, or WebP upload up to 10 MB. Uploads are
+validated with multipart limits and are not persisted by the app.
+
+`/healthz` is a liveness endpoint that only confirms the web process is
+running. `/readyz` loads the configured checkpoint once and returns `503` if
+`MODEL_PATH` is missing or unreadable; use `/readyz` for deployment health
+checks.
+
+The public demo applies a 5-request-per-minute, per-service rate limit and
+allows one model inference at a time. It returns `429` when the rate limit is
+reached or the CPU model is busy, rather than allowing CPU-bound requests to
+queue indefinitely.
+
+Build and run the same service in Docker:
+
+```bash
+docker build -t coin-aoi-demo .
+docker run --rm -p 8080:8080 \
+  -e MODEL_PATH=/models/best.pt \
+  -v "$(pwd)/runs/detect/v13/v13-yolo11n-cpu-e100-i640-s0/weights/best.pt:/models/best.pt:ro" \
+  coin-aoi-demo
+```
+
+### Deploy to Zeabur
+
+1. Push this repository to GitHub and add it as a Zeabur service. Zeabur
+   detects the root `Dockerfile`.
+2. Create a private Volume, mount it at `/models`, and upload the chosen
+   checkpoint as `/models/best.pt`. The weight stays out of Git and the Docker
+   image.
+3. Set `MODEL_PATH=/models/best.pt` and optionally `YOLO_DEVICE=cpu` in the
+   service variables. Zeabur provides `PORT`; the container listens on it.
+4. Expose the service as HTTP and configure the Health Check path as
+   `/readyz`. It confirms that `/models/best.pt` can be loaded before Zeabur
+   treats the service as ready. `/healthz` remains available for a lightweight
+   liveness check.
+5. Open the generated Zeabur domain, run the bundled example, then verify one
+   of your own images.
+
+The fixed v13 gate missed the C005 scratch case and has only three test images.
+In addition, the current v13 export needs a coin-level split audit before its
+test results can be treated as held-out evidence. The demo deliberately
+surfaces this limitation and must not be presented as a validated detector.
+
 Raw images, Roboflow exports, model weights, and full run directories are not
 committed. Download the v13 YOLO export to
 `data/roboflow/v13-cloud-augmented/`; the tracked
